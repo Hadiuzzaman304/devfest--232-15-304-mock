@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Escape — Interactive Evacuation Route Simulator</title>
+    <meta name="description" content="Smart Escape is an interactive building evacuation route simulator. Compute lowest-cost escape routes and respond to changing hazards in real time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header id="appHeader">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">🏢</span>
+                <h1 id="appTitle">Smart Escape</h1>
+            </div>
+            <span class="header-divider"></span>
+            <span class="building-name" id="buildingName">—</span>
+        </div>
+        <div class="header-right">
+            <button id="langToggle" class="btn-lang" title="Switch Language">
+                <span class="lang-icon">🌐</span>
+                <span id="langLabel">বাংলা</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main id="appMain">
+        <!-- ─── GRAPH AREA ─── -->
+        <section class="graph-section" id="graphSection">
+            <div class="graph-card">
+                <div class="graph-toolbar">
+                    <h2 id="mapTitle" data-i18n="buildingMap">Building Map</h2>
+                    <div class="legend" id="legendContainer">
+                        <div class="legend-item">
+                            <span class="legend-dot room"></span>
+                            <span data-i18n="room">Room</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot junction"></span>
+                            <span data-i18n="junction">Junction</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot exit"></span>
+                            <span data-i18n="exit">Exit</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot blocked"></span>
+                            <span data-i18n="blocked">Blocked</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-line route-line"></span>
+                            <span data-i18n="route">Route</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="svg-wrapper" id="svgWrapper">
+                    <svg id="graphSvg" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <!-- Glow filter for nodes -->
+                            <filter id="glowCyan" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="blur"/>
+                                <feFlood flood-color="#00e5ff" flood-opacity="0.5" result="color"/>
+                                <feComposite in="color" in2="blur" operator="in" result="glow"/>
+                                <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glowAmber" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="blur"/>
+                                <feFlood flood-color="#ffab00" flood-opacity="0.5" result="color"/>
+                                <feComposite in="color" in2="blur" operator="in" result="glow"/>
+                                <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="blur"/>
+                                <feFlood flood-color="#00e676" flood-opacity="0.5" result="color"/>
+                                <feComposite in="color" in2="blur" operator="in" result="glow"/>
+                                <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="blur"/>
+                                <feFlood flood-color="#ff1744" flood-opacity="0.4" result="color"/>
+                                <feComposite in="color" in2="blur" operator="in" result="glow"/>
+                                <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glowRoute" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="6" result="blur"/>
+                                <feFlood flood-color="#00e5ff" flood-opacity="0.6" result="color"/>
+                                <feComposite in="color" in2="blur" operator="in" result="glow"/>
+                                <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <!-- Arrow marker for route -->
+                            <marker id="routeArrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L8,3 L0,6 Z" fill="#00e5ff" opacity="0.9"/>
+                            </marker>
+                            <!-- Grid pattern -->
+                            <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(100,116,139,0.06)" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        <!-- Grid background -->
+                        <rect class="grid-bg" width="100%" height="100%" fill="url(#grid)"/>
+                        <!-- Edge layer -->
+                        <g id="edgeLayer"></g>
+                        <!-- Route layer -->
+                        <g id="routeLayer"></g>
+                        <!-- Node layer -->
+                        <g id="nodeLayer"></g>
+                    </svg>
+                    <!-- Empty state -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-icon">📂</div>
+                        <p id="emptyText" data-i18n="loadPrompt">Load a building file to get started</p>
+                    </div>
+                </div>
+                <!-- Route Info Bar -->
+                <div class="route-info-bar" id="routeInfoBar">
+                    <div class="route-status" id="routeStatus">
+                        <span class="status-icon" id="statusIcon">📍</span>
+                        <span class="status-text" id="statusText" data-i18n="selectStartPrompt">Click a room or junction on the map to select a starting point</span>
+                    </div>
+                    <div class="route-details" id="routeDetails" style="display:none;">
+                        <div class="route-path" id="routePath"></div>
+                        <div class="route-cost" id="routeCost"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── CONTROL PANEL ─── -->
+        <aside class="control-panel" id="controlPanel">
+            <!-- File Upload -->
+            <div class="panel-section" id="fileSection">
+                <h3 class="panel-heading">
+                    <span class="heading-icon">📁</span>
+                    <span data-i18n="loadData">Load Building Data</span>
+                </h3>
+                <label class="file-upload-btn" id="fileUploadLabel">
+                    <input type="file" id="fileInput" accept=".json" hidden>
+                    <span class="upload-icon">⬆️</span>
+                    <span data-i18n="chooseFile">Choose JSON File</span>
+                </label>
+                <p class="file-hint" id="fileHint" data-i18n="fileHint">Or the sample will auto-load</p>
+            </div>
+
+            <!-- Start Selection Info -->
+            <div class="panel-section" id="startSection" style="display:none;">
+                <h3 class="panel-heading">
+                    <span class="heading-icon">🎯</span>
+                    <span data-i18n="startLocation">Start Location</span>
+                </h3>
+                <div class="start-display" id="startDisplay">
+                    <span class="start-badge" id="startBadge" data-i18n="noneSelected">None selected</span>
+                </div>
+            </div>
+
+            <!-- Hazard Controls -->
+            <div class="panel-section hazard-section" id="hazardSection" style="display:none;">
+                <h3 class="panel-heading">
+                    <span class="heading-icon">⚠️</span>
+                    <span data-i18n="hazardControls">Hazard Simulation</span>
+                </h3>
+
+                <!-- Rooms & Junctions -->
+                <div class="toggle-group" id="nodeToggleGroup">
+                    <h4 class="toggle-group-title" data-i18n="roomsJunctions">Rooms &amp; Junctions</h4>
+                    <div class="toggle-list" id="nodeToggles"></div>
+                </div>
+
+                <!-- Exits -->
+                <div class="toggle-group" id="exitToggleGroup">
+                    <h4 class="toggle-group-title" data-i18n="exits">Exits</h4>
+                    <div class="toggle-list" id="exitToggles"></div>
+                </div>
+
+                <!-- Corridors -->
+                <div class="toggle-group" id="edgeToggleGroup">
+                    <h4 class="toggle-group-title" data-i18n="corridors">Corridors</h4>
+                    <div class="toggle-list" id="edgeToggles"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="panel-section panel-actions" id="actionsSection" style="display:none;">
+                <button class="btn-reset" id="resetBtn">
+                    <span class="btn-icon">🔄</span>
+                    <span data-i18n="resetAll">Reset All</span>
+                </button>
+            </div>
+
+            <!-- Error Display -->
+            <div class="panel-section error-section" id="errorSection" style="display:none;">
+                <div class="error-card" id="errorCard">
+                    <span class="error-icon">❌</span>
+                    <span class="error-text" id="errorText"></span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- ═══════════ FOOTER ═══════════ -->
+    <footer id="appFooter">
+        <p>Smart Escape &mdash; <span data-i18n="footerText">AI DevFest 2026 Mock Test</span></p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
