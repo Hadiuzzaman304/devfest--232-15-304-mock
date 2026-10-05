@@ -6,7 +6,7 @@
 
 - **Name:** Hadiuzzaman
 - **Registration Number:** 232-15-304
-- **Live Website:** *(deployment link here)*
+- **Live Website:** [https://devfest-232-15-304-mock.vercel.app](https://devfest-232-15-304-mock.vercel.app/)
 
 ## 🚀 How to Run
 
